@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#030812" />
+    <meta name="color-scheme" content="dark" />
+    <title>POPTRIQ · Film</title>
+    <script>
+      (() => {
+        const parts = location.pathname.split('/').filter(Boolean);
+        const routes = new Set(['movie', 'music', 'answer', 'admin']);
+        const first = parts[0] || '';
+        const base = location.hostname.endsWith('.github.io') && first && !routes.has(first)
+          ? `/${first}`
+          : '';
+
+        window.POPTRIQ_BASE_PATH = base;
+
+        const style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = `${base}/style.css`;
+        document.head.append(style);
+
+        const app = document.createElement('script');
+        app.type = 'module';
+        app.src = `${base}/app.js`;
+        document.head.append(app);
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="brand" aria-label="Poptriq">
+      <img data-brand-logo alt="POPTRIQ" />
+    </header>
+    <main id="app"></main>
+  </body>
+</html>
