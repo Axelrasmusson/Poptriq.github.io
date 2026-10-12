@@ -205,7 +205,7 @@ button, a { font: inherit; }
 
 .movie-screen.started .play-button,
 .movie-screen.started .movie-intro,
-.movie-screen.completed .player-stage,
+.movie-screen.completed .play-button,
 .movie-screen.completed .movie-intro { display: none; }
 
 body[data-state="playing"] .brand {
@@ -351,3 +351,6 @@ body[data-state="playing"] .playback-status { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+.round-result a.replay-button { display: inline-block; text-decoration: none; margin-right: 12px; }
+.movie-screen.completed .round-result { margin-top: 32px; scroll-margin-top: 24px; }

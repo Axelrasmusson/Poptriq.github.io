@@ -49,22 +49,35 @@ function requestFullscreen(element) {
   }
 }
 
-function exitFullscreen() {
+async function exitFullscreen() {
   const leave = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-  if (!leave || !(document.fullscreenElement || document.webkitFullscreenElement)) return;
-  try { leave.call(document); } catch {}
+  if (!leave || !(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement)) return;
+  try { await leave.call(document); } catch {}
 }
 
-function genericMovieResult(onReplay) {
+function movieResult(movie, onReplay) {
   const result = document.createElement('section');
   result.className = 'round-result';
-  result.innerHTML = `
-    <p class="result-kicker">FILM</p>
-    <h2>VAD VAR DET FÖR FILM?</h2>
-    <p>Diskutera med laget och skriv ner ert svar.</p>
-    <button class="replay-button" type="button">Spela igen</button>
-  `;
-  result.querySelector('.replay-button').addEventListener('click', onReplay);
+  const label = document.createElement('p');
+  label.className = 'result-kicker';
+  label.textContent = 'FILMEN VAR';
+  const title = document.createElement('h2');
+  title.textContent = movie.title;
+  title.tabIndex = -1;
+  result.append(label, title);
+  if (movie.id && movie.questions?.length) {
+    const answer = document.createElement('a');
+    answer.className = 'replay-button';
+    answer.href = siteUrl('/answer/' + movie.id);
+    answer.textContent = 'Visa facit';
+    result.append(answer);
+  }
+  const replay = document.createElement('button');
+  replay.className = 'replay-button';
+  replay.type = 'button';
+  replay.textContent = 'Spela igen';
+  replay.addEventListener('click', onReplay);
+  result.append(replay);
   return result;
 }
 
@@ -179,8 +192,10 @@ function showMovie(id, card) {
       return;
     }
 
-    exitFullscreen();
-    window.setTimeout(showResult, 220);
+    const duration = player?.getDuration?.();
+    if (duration > 0) player.seekTo(duration, true);
+    player?.pauseVideo?.();
+    exitFullscreen().finally(showResult);
   }
 
   function showResult() {
@@ -188,11 +203,14 @@ function showMovie(id, card) {
     setPageState('complete');
     screen.classList.remove('started');
     screen.classList.add('completed');
-    frame.hidden = true;
+    frame.hidden = false;
     support.hidden = true;
     status.textContent = '';
     screen.querySelector('.round-result')?.remove();
-    screen.append(genericMovieResult(startPlayback));
+    const result = movieResult(card || { title: source.title || 'Filmklippet är slut' }, startPlayback);
+    screen.append(result);
+    result.querySelector('h2').focus({ preventScroll: true });
+    result.scrollIntoView({ block: 'start', behavior: 'instant' });
   }
 
   async function startPlayback() {
