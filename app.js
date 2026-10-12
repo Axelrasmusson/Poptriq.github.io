@@ -148,7 +148,7 @@ function showMovie(id, card) {
         hl: 'sv',
         iv_load_policy: 3,
         modestbranding: 1,
-        playsinline: 0,
+        playsinline: 1,
         rel: 0,
         start: source.start,
       },
@@ -195,7 +195,13 @@ function showMovie(id, card) {
     const duration = player?.getDuration?.();
     if (duration > 0) player.seekTo(duration, true);
     player?.pauseVideo?.();
-    exitFullscreen().finally(showResult);
+    const leavingFullscreen = exitFullscreen();
+    showResult();
+    leavingFullscreen.then(() => {
+      if (document.body.dataset.state === 'complete') {
+        screen.querySelector('.round-result')?.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    });
   }
 
   function showResult() {
