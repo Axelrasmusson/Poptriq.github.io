@@ -148,7 +148,7 @@ function showMovie(id, card) {
         hl: 'sv',
         iv_load_policy: 3,
         modestbranding: 1,
-        playsinline: 1,
+        playsinline: 0,
         rel: 0,
         start: source.start,
       },
