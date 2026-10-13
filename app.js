@@ -280,6 +280,26 @@ function showMissing() {
   app.innerHTML = '<section class="message-card"><p class="category-label">POPTRIQ</p><h1>Kortet hittades inte</h1><p>Kontrollera QR-koden och försök igen.</p></section>';
 }
 
+function showMusic(card) {
+  let link;
+  try { link = new URL(card.link); } catch { return showMissing(); }
+  if (link.protocol !== 'https:' || link.hostname !== 'open.spotify.com' || !/^\/track\/[A-Za-z0-9]{22}$/.test(link.pathname)) return showMissing();
+  setPageState('music');
+  document.title = 'POPTRIQ · Musik';
+  app.innerHTML = '';
+  const screen = document.createElement('section');
+  screen.className = 'music-screen';
+  const label = document.createElement('p');
+  label.className = 'category-label';
+  label.textContent = 'MUSIK';
+  const play = document.createElement('a');
+  play.className = 'music-play-button';
+  play.href = link.href;
+  play.textContent = '▶ Spela låten';
+  screen.append(label, play);
+  app.append(screen);
+}
+
 async function route() {
   if (path === '/admin') return showAdmin();
   if (path === '/') {
@@ -298,7 +318,7 @@ async function route() {
   if (type.toLowerCase() === 'music') {
     const card = await loadCard('music', id);
     if (!card?.link) return showMissing();
-    location.replace(card.link);
+    showMusic(card);
     return;
   }
 
