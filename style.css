@@ -391,3 +391,5 @@ body[data-state="playing"] .playback-status { display: none; }
 @media (orientation: landscape) and (max-height: 500px) {
   .music-screen { padding-top: 16px; gap: 20px; }
 }
+
+.music-web-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 14px; text-underline-offset: 4px; }

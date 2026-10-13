@@ -294,9 +294,24 @@ function showMusic(card) {
   label.textContent = 'MUSIK';
   const play = document.createElement('a');
   play.className = 'music-play-button';
-  play.href = link.href;
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isSamsungInternet = /SamsungBrowser\//i.test(navigator.userAgent);
+  const trackId = link.pathname.split('/').pop();
+  // Ett aktivt tryck begär Spotify-appen; Chrome kan använda HTTPS-reserven.
+  play.href = isAndroid
+    ? (isSamsungInternet
+      ? 'spotify:track:' + trackId
+      : 'intent:track:' + trackId + '#Intent;scheme=spotify;package=com.spotify.music;S.browser_fallback_url=' + encodeURIComponent(link.href) + ';end')
+    : link.href;
   play.textContent = '▶ Spela låten';
   screen.append(label, play);
+  if (isAndroid) {
+    const web = document.createElement('a');
+    web.className = 'music-web-link';
+    web.href = link.href;
+    web.textContent = 'Öppna i webbläsaren';
+    screen.append(web);
+  }
   app.append(screen);
 }
 
