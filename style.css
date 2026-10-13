@@ -392,4 +392,3 @@ body[data-state="playing"] .playback-status { display: none; }
   .music-screen { padding-top: 16px; gap: 20px; }
 }
 
-.music-web-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 14px; text-underline-offset: 4px; }

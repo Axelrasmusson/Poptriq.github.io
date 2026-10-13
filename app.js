@@ -305,13 +305,6 @@ function showMusic(card) {
     : link.href;
   play.textContent = '▶ Spela låten';
   screen.append(label, play);
-  if (isAndroid) {
-    const web = document.createElement('a');
-    web.className = 'music-web-link';
-    web.href = link.href;
-    web.textContent = 'Öppna i webbläsaren';
-    screen.append(web);
-  }
   app.append(screen);
 }
 
