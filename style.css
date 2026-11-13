@@ -367,10 +367,6 @@ body[data-state="playing"] .playback-status { display: none; }
   align-items: center;
   gap: 30px;
 }
-
-/* Only the active movie area changes; the existing start view stays untouched. */
-.movie-screen.started .player-stage { min-height: 200px; }
-.movie-screen.started .player-stage::after { content: none; }
 .music-play-button {
   display: flex;
   align-items: center;
@@ -395,3 +391,4 @@ body[data-state="playing"] .playback-status { display: none; }
 @media (orientation: landscape) and (max-height: 500px) {
   .music-screen { padding-top: 16px; gap: 20px; }
 }
+
