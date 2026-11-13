@@ -1,5 +1,6 @@
 import { movies } from './movies.js';
 import { loadCard, loadCards, youtubeId } from './cards.js';
+import { PlaybackClock } from './playback-clock.js';
 
 const basePath = window.POPTRIQ_BASE_PATH || '';
 const app = document.querySelector('#app');
@@ -9,9 +10,7 @@ const rawPath = location.pathname.startsWith(basePath)
   ? location.pathname.slice(basePath.length)
   : location.pathname;
 const path = rawPath.replace(/\/+$/, '') || '/';
-const params = new URLSearchParams(location.search);
-const singlePlay = params.get('version') === 'single';
-const totalPlays = singlePlay ? 1 : 2;
+// Existing query URLs remain valid; every movie round now requires 40 seconds of playback.
 
 logo.src = `${basePath}/assets/poptriq-logo.png`;
 
@@ -23,20 +22,45 @@ function setPageState(state) {
   document.body.dataset.state = state;
 }
 
+let youtubeApiPromise;
+function prepareYouTubeConnections() {
+  for (const origin of ['https://www.youtube.com', 'https://s.ytimg.com', 'https://i.ytimg.com']) {
+    if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) continue;
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    document.head.append(link);
+  }
+}
+
 function loadYouTubeApi() {
   if (window.YT?.Player) return Promise.resolve(window.YT);
-  return new Promise((resolve) => {
+  if (youtubeApiPromise) return youtubeApiPromise;
+  youtubeApiPromise = new Promise((resolve, reject) => {
     const previous = window.onYouTubeIframeAPIReady;
+    const timeout = window.setTimeout(() => fail(), 20000);
+    let script = document.querySelector('script[src*="youtube.com/iframe_api"]');
+    function fail() {
+      window.clearTimeout(timeout);
+      script?.remove();
+      youtubeApiPromise = null;
+      window.onYouTubeIframeAPIReady = previous;
+      reject(new Error('YouTube API unavailable'));
+    }
     window.onYouTubeIframeAPIReady = () => {
+      window.clearTimeout(timeout);
       previous?.();
       resolve(window.YT);
     };
-    if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-      const script = document.createElement('script');
+    if (!script) {
+      script = document.createElement('script');
       script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      script.onerror = fail;
       document.head.append(script);
     }
   });
+  return youtubeApiPromise;
 }
 
 function requestFullscreen(element) {
@@ -130,70 +154,72 @@ function showMovie(id, card) {
 
   let player;
   let timer;
-  let plays = 0;
-  let ending = false;
-  let readyResolve;
-  const playerReady = new Promise((resolve) => { readyResolve = resolve; });
-
-  loadYouTubeApi().then(() => {
-    player = new window.YT.Player(playerMount.id, {
-      videoId: source.youtubeId,
-      playerVars: {
-        autoplay: 0,
-        controls: 1,
-        disablekb: 0,
-        enablejsapi: 1,
-        end: source.end,
-        fs: 1,
-        hl: 'sv',
-        iv_load_policy: 3,
-        modestbranding: 1,
-        playsinline: 0,
-        rel: 0,
-        start: source.start,
-      },
-      events: {
-        onReady: readyResolve,
-        onStateChange: ({ data }) => {
-          if (data === window.YT.PlayerState.PLAYING) monitorEnd();
-          if (data === window.YT.PlayerState.ENDED) finishPlay();
-        },
-      },
-    });
-  });
+  let readyTimeout;
+  let stallTimeout;
+  let active = false;
+  let generation = 0;
+  let looping = false;
+  let passStart = 0;
+  let lastProgress = 0;
+  const clock = new PlaybackClock(40);
 
   function clearTimer() {
     if (timer) window.clearInterval(timer);
     timer = null;
   }
 
-  function monitorEnd() {
-    clearTimer();
-    timer = window.setInterval(() => {
-      if (!player?.getCurrentTime) return;
-      if (player.getCurrentTime() >= source.end - 0.12) finishPlay();
-    }, 120);
+  function clearWaits() {
+    window.clearTimeout(readyTimeout);
+    window.clearTimeout(stallTimeout);
   }
 
-  function finishPlay() {
-    if (ending) return;
-    ending = true;
+  function playbackError(message = 'Klippet kunde inte startas. Kontrollera anslutningen och försök igen.') {
+    if (!active) return;
+    active = false;
+    generation++;
     clearTimer();
-    player?.pauseVideo?.();
-    plays += 1;
+    clearWaits();
+    clock.stop();
+    player?.destroy?.();
+    player = null;
+    frame.replaceChildren(playerMount);
+    frame.hidden = true;
+    screen.classList.remove('started');
+    screen.classList.remove('completed');
+    setPageState('ready');
+    startButton.disabled = false;
+    status.textContent = message;
+    exitFullscreen();
+  }
 
-    if (plays < totalPlays) {
-      status.textContent = `Visning ${plays + 1} av ${totalPlays}`;
-      window.setTimeout(() => {
-        ending = false;
-        player.seekTo(source.start, true);
-        player.playVideo();
-      }, 450);
-      return;
-    }
+  function armStallTimeout() {
+    window.clearTimeout(stallTimeout);
+    stallTimeout = window.setTimeout(() => playbackError('Laddningen tar för lång tid. Kontrollera anslutningen och försök igen.'), 30000);
+  }
 
-    const duration = player?.getDuration?.();
-    if (duration > 0) player.seekTo(duration, true);
+  function samplePlayback() {
+    if (!active) return false;
+    const complete = clock.sample(player.getCurrentTime(), performance.now(), player.getPlaybackRate?.() || 1);
+    if (complete) finishRound();
+    return complete;
+  }
+
+  function nextSegment() {
+    if (!active || looping) return;
+    looping = true;
+    clock.stop();
+    clearTimer();
+    // Keep exactly the same video and segment; repeat until 40 actual seconds are observed.
+    passStart = clock.elapsed;
+    armStallTimeout();
+    player.loadVideoById({ videoId: source.youtubeId, startSeconds: source.start, endSeconds: source.end });
+  }
+
+  function finishRound() {
+    active = false;
+    clearTimer();
+    clearWaits();
+    clock.stop();
     player?.pauseVideo?.();
     const leavingFullscreen = exitFullscreen();
     showResult();
@@ -220,20 +246,97 @@ function showMovie(id, card) {
   }
 
   async function startPlayback() {
-    ending = false;
-    plays = 0;
-    setPageState('playing');
+    if (active) return;
+    active = true;
+    const attempt = ++generation;
+    clock.reset();
+    looping = false;
+    passStart = 0;
+    player?.destroy?.();
+    player = null;
+    frame.replaceChildren(playerMount);
+    setPageState('loading');
     screen.classList.remove('completed');
     screen.classList.add('started');
     screen.querySelector('.round-result')?.remove();
     frame.hidden = false;
     support.hidden = false;
-    status.textContent = totalPlays > 1 ? `Visning 1 av ${totalPlays}` : '';
+    status.textContent = 'Laddar filmklippet…';
 
+    // Ask during the original gesture. Never wait for network readiness first.
     requestFullscreen(frame);
-    await playerReady;
-    player.seekTo(source.start, true);
-    player.playVideo();
+    readyTimeout = window.setTimeout(() => playbackError('Spelaren kunde inte laddas. Kontrollera anslutningen och försök igen.'), 25000);
+    try {
+      const YT = await loadYouTubeApi();
+      if (!active || attempt !== generation) return;
+      // No iframe exists until Start has made the video area visible.
+      player = new YT.Player(playerMount.id, {
+        videoId: source.youtubeId,
+        playerVars: { autoplay: 0, controls: 1, disablekb: 0, enablejsapi: 1,
+          start: source.start, end: source.end, fs: 1, hl: 'sv',
+          iv_load_policy: 3, playsinline: 0, rel: 0, origin: location.origin },
+        events: {
+          onReady(event) {
+            if (!active || attempt !== generation) return;
+            window.clearTimeout(readyTimeout);
+            const readyPlayer = event.target;
+            const iframe = readyPlayer.getIframe();
+            iframe.title = 'POPTRIQ · Filmklipp';
+            iframe.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+            iframe.setAttribute('allowfullscreen', '');
+            iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+            armStallTimeout();
+            readyPlayer.playVideo();
+          },
+          onStateChange({ data }) {
+            if (!active || attempt !== generation) return;
+            if (clock.playing && samplePlayback()) return;
+            clock.stop();
+            clearTimer();
+            if (data === YT.PlayerState.PLAYING) {
+              looping = false;
+              window.clearTimeout(stallTimeout);
+              setPageState('playing');
+              status.textContent = '';
+              clock.start(player.getCurrentTime(), performance.now());
+              lastProgress = performance.now();
+              timer = window.setInterval(() => {
+                if (player.getPlayerState() !== YT.PlayerState.PLAYING) return;
+                const elapsed = clock.elapsed;
+                if (samplePlayback()) return;
+                if (clock.elapsed > elapsed) lastProgress = performance.now();
+                if (performance.now() - lastProgress >= 30000) {
+                  playbackError('Uppspelningen har stannat. Kontrollera anslutningen och försök igen.');
+                  return;
+                }
+                if (player.getCurrentTime() >= source.end) nextSegment();
+              }, 100);
+            } else if (data === YT.PlayerState.ENDED) {
+              if (looping) return;
+              if (clock.elapsed <= passStart) {
+                playbackError('Klippet kunde inte spelas från sin startpunkt. Försök igen.');
+              } else nextSegment();
+            } else if (data === YT.PlayerState.BUFFERING) {
+              status.textContent = 'Buffrar… gissningstiden är pausad.';
+              armStallTimeout();
+            } else if (data === YT.PlayerState.PAUSED) {
+              window.clearTimeout(stallTimeout);
+              status.textContent = 'Pausat. Fortsätt med videons play-knapp.';
+            }
+          },
+          onError() { if (attempt === generation) playbackError(); },
+          onAutoplayBlocked() {
+            if (!active || attempt !== generation) return;
+            clock.stop();
+            clearTimer();
+            clearWaits();
+            setPageState('blocked');
+            // Leave the entire native player visible and usable, with no overlay.
+            status.textContent = 'Tryck på videons play-knapp för att starta. Gissningstiden väntar.';
+          }
+        }
+      });
+    } catch { if (attempt === generation) playbackError(); }
   }
 
   startButton.addEventListener('click', startPlayback);
@@ -339,4 +442,9 @@ async function route() {
   showMovie(id, card);
 }
 
+// Prepare only connections and the API on the start/movie pages, never a hidden player.
+if (path === '/' || /^\/(?:movie\/[^/]+|\d+)$/i.test(path)) {
+  prepareYouTubeConnections();
+  loadYouTubeApi().catch(() => {});
+}
 route();

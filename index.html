@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#030812" />
     <meta name="color-scheme" content="dark" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>POPTRIQ · Film</title>
     <script>
       (() => {
@@ -19,12 +20,12 @@
 
         const style = document.createElement('link');
         style.rel = 'stylesheet';
-        style.href = `${base}/style.css?v=20261013-music-clean3`;
+        style.href = `${base}/style.css?v=20261113-player`;
         document.head.append(style);
 
         const app = document.createElement('script');
         app.type = 'module';
-        app.src = `${base}/app.js?v=20261013-music-clean3`;
+        app.src = `${base}/app.js?v=20261113-player`;
         document.head.append(app);
       })();
     </script>
