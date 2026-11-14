@@ -17,15 +17,23 @@
 
         window.POPTRIQ_BASE_PATH = base;
 
+        const version = '20261114-admin2';
         const style = document.createElement('link');
         style.rel = 'stylesheet';
-        style.href = `${base}/style.css?v=20261113-restore`;
+        style.href = `${base}/style.css?v=${version}`;
         document.head.append(style);
 
-        const app = document.createElement('script');
-        app.type = 'module';
-        app.src = `${base}/app.js?v=20261113-restore`;
-        document.head.append(app);
+        const start = () => {
+          const app = document.createElement('script');
+          app.type = 'module';
+          app.src = `${base}/app.js?v=${version}`;
+          document.head.append(app);
+        };
+        const config = document.createElement('script');
+        config.src = `${base}/config.js?v=${version}`;
+        config.onload = start;
+        config.onerror = start;
+        document.head.append(config);
       })();
     </script>
   </head>

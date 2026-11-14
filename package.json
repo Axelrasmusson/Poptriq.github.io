@@ -1,0 +1,9 @@
+{
+  "name": "poptriq",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "generate:seed": "node scripts/generate-seed.mjs"
+  }
+}

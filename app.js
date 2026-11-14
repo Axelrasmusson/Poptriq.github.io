@@ -1,5 +1,6 @@
 import { movies } from './movies.js';
-import { loadCard, loadCards, youtubeId } from './cards.js';
+import { loadCard, youtubeId } from './cards.js';
+import { showAdmin } from './admin.js';
 
 const basePath = window.POPTRIQ_BASE_PATH || '';
 const app = document.querySelector('#app');
@@ -84,8 +85,8 @@ function movieResult(movie, onReplay) {
 function showMovie(id, card) {
   const source = movies[id] || (card ? {
     youtubeId: youtubeId(card.link),
-    start: 20,
-    end: 40,
+    start: Number(card.playback?.start ?? 20),
+    end: Number(card.playback?.end ?? 40),
   } : null);
 
   if (!source?.youtubeId) return showMissing();
@@ -242,37 +243,29 @@ function showMovie(id, card) {
 function showAnswer(card) {
   if (!card) return showMissing();
   setPageState('answer');
-  app.innerHTML = `
-    <section class="answer-card">
-      <p class="category-label">FACIT · ${card.id}</p>
-      <h1>${card.title}</h1>
-      ${card.artist ? `<p class="artist">${card.artist}</p>` : ''}
-      <ol>${card.questions.map((answer) => `<li>${answer}</li>`).join('')}</ol>
-    </section>
-  `;
-}
-
-async function showAdmin() {
-  setPageState('admin');
-  const [movieCards, musicCards] = await Promise.all([loadCards('movie'), loadCards('music')]);
-  const rows = [
-    ...Object.keys(movies).map((id) => ({ type: 'movie', id, label: `Äldre filmkort ${id}` })),
-    ...movieCards.map((card) => ({ ...card, label: card.title })),
-    ...musicCards.map((card) => ({ ...card, label: card.title })),
-  ];
-  app.innerHTML = `
-    <section class="admin-panel">
-      <p class="category-label">POPTRIQ</p>
-      <h1>Kortlänkar</h1>
-      <div class="admin-list">
-        ${rows.map((row) => {
-          const playRoute = row.type === 'music' ? `/music/${row.id}` : `/movie/${row.id}`;
-          const answer = row.title ? `<a href="${basePath}/answer/${row.id}">Facit</a>` : '';
-          return `<article><div><strong>${row.id}</strong><span>${row.label}</span></div><div><a href="${basePath}${playRoute}">Öppna</a>${answer}</div><small>${siteUrl(playRoute)}</small></article>`;
-        }).join('')}
-      </div>
-    </section>
-  `;
+  app.innerHTML = '';
+  const section = document.createElement('section');
+  section.className = 'answer-card';
+  const label = document.createElement('p');
+  label.className = 'category-label';
+  label.textContent = `FACIT · ${card.id}`;
+  const title = document.createElement('h1');
+  title.textContent = card.title;
+  section.append(label, title);
+  if (card.artist) {
+    const artist = document.createElement('p');
+    artist.className = 'artist';
+    artist.textContent = card.artist;
+    section.append(artist);
+  }
+  const answers = document.createElement('ol');
+  for (const answer of card.answers || []) {
+    const item = document.createElement('li');
+    item.textContent = answer;
+    answers.append(item);
+  }
+  section.append(answers);
+  app.append(section);
 }
 
 function showMissing() {
@@ -309,7 +302,7 @@ function showMusic(card) {
 }
 
 async function route() {
-  if (path === '/admin') return showAdmin();
+  if (path === '/admin') return showAdmin({ app, basePath, siteUrl, setPageState });
   if (path === '/') {
     setPageState('home');
     app.innerHTML = '<section class="message-card"><p class="category-label">POPTRIQ</p><h1>Skanna ett spelkort</h1><p>Den här sidan öppnas via spelets QR-koder.</p></section>';

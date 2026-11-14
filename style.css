@@ -392,3 +392,95 @@ body[data-state="playing"] .playback-status { display: none; }
   .music-screen { padding-top: 16px; gap: 20px; }
 }
 
+/* Admin använder samma färger och typografi men ett tätare arbetsläge. */
+.admin-shell {
+  width: min(calc(100% - 32px), 1220px);
+  margin: 20px auto 70px;
+}
+.admin-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+.admin-toolbar h1 { margin: 13px 0 0; font-size: clamp(31px, 6vw, 48px); }
+.toolbar-actions, .save-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-toolbar button,
+.card-list button,
+.qr-section button,
+.primary-button,
+.preview-link {
+  border: 1px solid rgba(119,187,255,.28);
+  border-radius: 10px;
+  background: rgba(13, 42, 72, .8);
+  color: #eaf4ff;
+  padding: 10px 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.primary-button { background: #1e70c8; font-weight: 700; }
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 330px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.card-browser,
+.editor-panel {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(7,17,31,.88);
+}
+.card-browser { position: sticky; top: 16px; padding: 17px; }
+.editor-panel { padding: clamp(20px, 4vw, 38px); }
+.admin-shell label,
+.admin-login label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 15px;
+  color: #c5d1dc;
+  font-size: 13px;
+  font-weight: 600;
+}
+.admin-shell input,
+.admin-shell select,
+.admin-shell textarea,
+.admin-login input {
+  width: 100%;
+  border: 1px solid rgba(119,187,255,.22);
+  border-radius: 9px;
+  background: #06101d;
+  color: #f3f5f7;
+  padding: 11px 12px;
+}
+.admin-shell textarea { min-height: 82px; resize: vertical; line-height: 1.45; }
+.admin-shell input[readonly] { color: #8fa4b8; cursor: not-allowed; }
+.filter-label { margin-top: 12px; }
+.card-count { margin: 12px 0; color: var(--muted); font-size: 12px; }
+.card-list { display: grid; gap: 7px; max-height: 65svh; overflow-y: auto; }
+.card-list button { display: grid; gap: 3px; width: 100%; text-align: left; }
+.card-list button.selected { border-color: var(--blue-light); background: rgba(28,92,158,.62); }
+.card-list span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-list small { color: var(--muted); }
+.editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 24px; }
+.editor-heading h2 { margin: 10px 0 0; font-size: 36px; }
+.editor-panel fieldset { margin: 24px 0; padding: 19px; border: 1px solid var(--line); border-radius: 13px; }
+.editor-panel legend { padding: 0 8px; color: var(--blue-light); font-weight: 700; }
+.form-status { min-height: 20px; margin: 0; color: #a9ccef; }
+.qr-section { margin-top: 38px; border-top: 1px solid var(--line); padding-top: 25px; }
+.qr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.qr-grid article { display: grid; justify-items: center; gap: 12px; padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: rgba(4,12,22,.68); }
+.qr-grid h4 { margin: 0; }
+.qr-grid canvas { width: min(100%, 240px) !important; height: auto !important; background: white; border-radius: 6px; }
+.qr-grid code { width: 100%; color: var(--muted); overflow-wrap: anywhere; font-size: 11px; }
+.admin-setup code { color: var(--blue-light); }
+
+@media (max-width: 760px) {
+  .admin-toolbar { align-items: start; flex-direction: column; }
+  .admin-grid { grid-template-columns: 1fr; }
+  .card-browser { position: static; }
+  .card-list { max-height: 38svh; }
+  .qr-grid { grid-template-columns: 1fr; }
+}
+
